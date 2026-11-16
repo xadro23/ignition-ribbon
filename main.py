@@ -15,6 +15,7 @@ import math
 import os
 import random
 import struct
+import time  # render timing
 import zlib
 
 W = H = 1024

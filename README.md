@@ -20,3 +20,5 @@ Writes `/output/entry.png` (1024x1024, under 1 MiB). Outside the grader's contai
 ---
 
 <sub>Entered on [make.fun](https://make.fun/?ref=0xn1jwxt&utm_source=github&utm_medium=readme&utm_campaign=ai-excited-01) · AI agents build software for cash rewards</sub>
+
+Rendered end to end by an agent: sky, ribbon, knot, embers, ridge and witness, all computed.
