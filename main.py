@@ -254,55 +254,94 @@ def embers(img):
 
 
 def silhouette(img):
-    """A tiny figure on a dark ridge, arms raised to the light: the scale beat."""
+    """A dark jagged ridge across the foot of the frame with one small witness
+    standing on its peak, arms thrown out: the scale beat under all that light."""
     rng = random.Random(17)
-    fx, fy = 0.20 * W, 0.885 * H          # feet on the ridge
-    hgt = 46                              # ~4.5% of frame: small but readable
-    # the ridge: a dark slope the figure stands on
-    for y in range(int(fy) - 6, H):
-        wob = 8 * math.sin((y - fy) * 0.05 + 1.2)
-        for x in range(0, W):
-            d = abs(x - fx) - (y - fy) * 2.6 - wob
-            if d < 90:
-                i = (y * W + x) * 3
-                img[i] *= 0.10
-                img[i + 1] *= 0.08
-                img[i + 2] *= 0.16
-    # figure: head, body, two raised arms, legs; pure dark against the glow
-    hx, hy = fx, fy - hgt * 0.86
-    hr = hgt * 0.115
-    body_top = fy - hgt * 0.72
-    def dark(x, y):
+    base = 0.905 * H
+    # ridge height profile: a few peaks, the tallest at the figure's feet
+    peaks = [(0.00, 34), (0.09, 58), (0.17, 96), (0.235, 132), (0.30, 104),
+             (0.38, 70), (0.47, 96), (0.56, 58), (0.66, 84), (0.77, 46),
+             (0.88, 66), (1.00, 40)]
+
+    def ridge_y(xf):
+        for i in range(len(peaks) - 1):
+            x0, h0 = peaks[i]
+            x1, h1 = peaks[i + 1]
+            if x0 <= xf <= x1:
+                u = (xf - x0) / (x1 - x0)
+                u = u * u * (3 - 2 * u)
+                h = h0 + (h1 - h0) * u
+                h += 7.0 * math.sin(xf * 61.0) + 3.5 * math.sin(xf * 137.0 + 1.1)
+                return base - h
+        return base - peaks[-1][1]
+
+    for x in range(W):
+        ytop = int(ridge_y(x / W))
+        # rim light on the ridge: the ignition is up and to the right
+        rim = 0.55 * math.exp(-((x / W - 0.585) ** 2) / 0.10)
+        for y in range(ytop, H):
+            i = (y * W + x) * 3
+            depth = min((y - ytop) / 12.0, 1.0)
+            img[i] = img[i] * 0.05 + rim * (1.0 - depth) * 0.55
+            img[i + 1] = img[i + 1] * 0.04 + rim * (1.0 - depth) * 0.38
+            img[i + 2] = img[i + 2] * 0.08 + rim * (1.0 - depth) * 0.60
+
+    # the witness: feet on the tallest peak, ~7% of the frame tall
+    fx = 0.235 * W
+    fy = ridge_y(0.235) + 2.0
+    hgt = 72.0
+
+    def dark(x, y, alpha=1.0):
         if 0 <= x < W and 0 <= y < H:
             i = (y * W + x) * 3
-            img[i] *= 0.06
-            img[i + 1] *= 0.05
-            img[i + 2] *= 0.10
+            img[i] *= (1.0 - 0.94 * alpha)
+            img[i + 1] *= (1.0 - 0.95 * alpha)
+            img[i + 2] *= (1.0 - 0.90 * alpha)
+
+    hx = fx + 2.0
+    hy = fy - hgt * 0.88
+    hr = hgt * 0.098
     for oy in range(-int(hr) - 1, int(hr) + 2):
         for ox in range(-int(hr) - 1, int(hr) + 2):
             if ox * ox + oy * oy <= hr * hr:
                 dark(int(hx + ox), int(hy + oy))
-    bw = hgt * 0.13
-    for y in range(int(body_top), int(fy - hgt * 0.30)):
-        for x in range(int(hx - bw), int(hx + bw) + 1):
+    # torso leaning back, hips forward: the classic awed stance
+    torso_top = hy + hr
+    torso_bot = fy - hgt * 0.44
+    for y in range(int(torso_top), int(torso_bot)):
+        u = (y - torso_top) / max(torso_bot - torso_top, 1.0)
+        cx = hx + 3.2 * u
+        halfw = 2.6 + 2.4 * u
+        for x in range(int(cx - halfw), int(cx + halfw) + 1):
             dark(x, y)
-    # raised arms: from shoulders up and out
+    # arms: up and out, hands open
     for sgn in (-1, 1):
-        for s in range(int(hgt * 0.42)):
-            t = s / (hgt * 0.42)
-            ax = hx + sgn * (hgt * 0.10 + t * hgt * 0.30)
-            ay = body_top + hgt * 0.06 - t * hgt * 0.34
-            for oy in range(-1, 2):
-                for ox in range(-1, 2):
-                    dark(int(ax + ox), int(ay + oy))
-    # legs
+        ax0 = hx + sgn * 2.6
+        ay0 = torso_top + 3.0
+        ax1 = hx + sgn * hgt * 0.30
+        ay1 = torso_top - hgt * 0.40
+        for s in range(int(hgt * 0.48)):
+            t = s / (hgt * 0.48)
+            ex = ax0 + (ax1 - ax0) * t
+            ey = ay0 + (ay1 - ay0) * t + 3.0 * t * t
+            for oy in (-1, 0, 1):
+                for ox in (-1, 0, 1):
+                    dark(int(ex + ox), int(ey + oy))
+        for oy in (-1, 0, 1):
+            for ox in (-1, 0, 1):
+                dark(int(ax1 + ox), int(ay1 + oy))
+    # legs, slightly apart for balance
     for sgn in (-1, 1):
-        for s in range(int(hgt * 0.30)):
-            lx = hx + sgn * hgt * 0.07
-            ly = fy - hgt * 0.30 + s
-            for oy in range(0, 2):
-                for ox in range(-1, 2):
-                    dark(int(lx + ox), int(ly + oy))
+        for s in range(int(hgt * 0.46)):
+            t = s / (hgt * 0.46)
+            lx = hx + sgn * (1.2 + 4.4 * t)
+            ly = torso_bot + s
+            for ox in (-1, 0, 1):
+                dark(int(lx + ox), int(ly))
+    # a faint glow catching the figure's edge: it is lit from behind
+    for s in range(26):
+        a = -0.6 + s * 0.05
+        dark(int(hx + math.cos(a) * (hr + 1.4)), int(hy + math.sin(a) * (hr + 1.4)), 0.35)
 
 
 def stars(img):
